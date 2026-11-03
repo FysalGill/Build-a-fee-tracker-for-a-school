@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Fee Tracker</title>
+<style>
+  :root {
+    --green: #16a34a;
+    --red: #dc2626;
+    --amber: #d97706;
+    --blue: #2563eb;
+    --gray: #64748b;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --line: #e2e8f0;
+    --text: #0f172a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+  .term {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 18px;
+    border-left: 5px solid var(--gray);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.08);
+  }
+  .card.paid { border-left-color: var(--green); }
+  .card.late { border-left-color: var(--red); }
+  .card.partial { border-left-color: var(--amber); }
+  .card.total { border-left-color: var(--blue); }
+  .card .label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray);
+    font-weight: 700;
+  }
+  .card .value { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
+  .card .sub { font-size: 0.78rem; color: var(--gray); margin-top: 2px; }
+
+  .panel {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.08);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel h2 span.hint { font-size: 0.75rem; font-weight: 400; color: var(--gray); }
+
+  .toolbar {
+    padding: 12px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    background: #f8fafc;
+  }
+  .toolbar input, .toolbar select {
+    padding: 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    background: #fff;
+  }
+  .toolbar input { flex: 1 1 200px; min-width: 160px; }
+  .toolbar select { flex: 0 0 auto; }
+  .toolbar button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .toolbar button:hover { background: #1d4ed8; }
+  .toolbar button.ghost {
+    background: #fff;
+    color: var(--gray);
+    border: 1px solid var(--line);
+  }
+  .toolbar button.ghost:hover { background: #f1f5f9; }
+
+  .table-scroll { max-height: 520px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    z-index: 2;
+  }
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: #f8fafc; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .badge.paid { background: #dcfce7; color: #15803d; }
+  .badge.partial { background: #fef3c7; color: #b45309; }
+  .badge.late { background: #fee2e2; color: #b91c1c; }
+
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.9rem;
+  }
+
+  .bars { padding: 18px; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+  }
+  .bar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+    height: 22px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.4s ease;
+  }
+  .bar-fill.paid { background: var(--green); }
+  .bar-fill.partial { background: var(--amber); }
+  .bar-fill.late { background: var(--red); }
+  .bar-val { text-align: right; color: var(--gray); font-variant-numeric: tabular-nums; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 0 18px 16px;
+    font-size: 0.78rem;
+    color: var(--gray);
+  }
+  .legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-right: 5px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--gray);
+    padding: 10px 0 30px;
+  }
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    header { padding: 16px; }
+    header h1 { font-size: 1.15rem; }
+    .bar-row { grid-template-columns: 70px 1fr 90px; font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>School Fee Tracker</h1>
+      <p id="schoolLine">300 students &middot; monthly fee ledger</p>
+    </div>
+    <div class="term" id="termLabel">Term: —</div>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="panel">
+    <h2>
+      Monthly Summary
+      <span class="hint">Collection by month across the term</span>
+    </h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="num">Billed (PKR)</th>
+            <th class="num">Collected (PKR)</th>
+            <th class="num">Outstanding (PKR)</th>
+            <th class="num">Paid</th>
+            <th class="num">Partial</th>
+            <th class="num">Late</th>
+            <th class="num">Rate</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+    <div class="bars" id="summaryBars"></div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i>Paid in full</span>
+      <span><i style="background:var(--amber)"></i>Partial payment</span>
+      <span><i style="background:var(--red)"></i>Late / unpaid</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>
+      Student Ledger
+      <span class="hint" id="countLabel"></span>
+    </h2>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search by name, ID or class…">
+      <select id="classFilter"><option value="">All classes</option></select>
+      <select id="statusFilter">
+        <option value="">All statuses</option>
+        <option value="paid">Paid</option>
+        <option value="partial">Partial</option>
+        <option value="late">Late</option>
+      </select>
+      <select id="monthFilter"><option value="">All months</option></select>
+      <button class="ghost" id="clearBtn">Clear</button>
+      <button id="exportBtn">Export CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Month</th>
+            <th class="num">Fee Due</th>
+            <th class="num">Paid</th>
+            <th class="num">Balance</th>
+            <th>Due Date</th>
+            <th>Paid On</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none">No records match your filters.</div>
+  </div>
+
+  <footer>Fee Tracker &middot; demo data generated locally &middot; amounts in PKR</footer>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   DATA MODEL
+   ------------------------------------------------------------------
+   300 students, each with a monthly fee. Each student has a payment
+   record per month. Status is derived:
+     paid    -> paid >= due
+     partial -> 0 < paid < due
+     late    -> paid == 0 and due date has passed
+   ------------------------------------------------------------------ */
+
+const TERM_MONTHS = [
+  { key: '2025-01', label: 'Jan 2025', dueDay: 10 },
+  { key: '2025-02', label: 'Feb 2025', dueDay: 10 },
+  { key: '2025-03', label: 'Mar 2025', dueDay: 10 },
+  { key: '2025-04', label: 'Apr 2025', dueDay: 10 },
+  { key: '2025-05', label: 'May 2025', dueDay: 10 },
+  { key: '2025-06', label: 'Jun 2025', dueDay: 10 }
+];
+
+const CLASSES = [
+  { name: 'Grade 5',  fee: 4500,  count: 50 },
+  { name: 'Grade 6',  fee: 5000,  count: 50 },
+  { name: 'Grade 7',  fee: 5500,  count: 50 },
+  { name: 'Grade 8',  fee: 6000,  count: 50 },
+  { name: 'Grade 9',  fee: 7000,  count: 50 },
+  { name: 'Grade 10', fee: 8000,  count: 50 }
+];
+
+const FIRST_NAMES = [
+  'Ahmed','Ayesha','Bilal','Fatima','Hassan','Hira','Imran','Iqra','Junaid','Khadija',
+  'Kamran','Laiba','Mehran','Maryam','Nabeel','Noor','Omar','Rabia','Rehan','Sana',
+  'Salman','Sadia','Tahir','Uzma','Usman','Warda','Yasir','Zainab','Zeeshan','Amna',
+  'Arham','Areeba','Danish','Dua','Faisal','Farah','Ghulam','Gulzar','Hamza','Hina',
+  'Irfan','Javeria','Kashif','Kiran','Moiz','Mahnoor','Naveed','Nimra','Owais','Palwasha'
+];
+const LAST_NAMES = [
+  'Khan','Ahmed','Malik','Butt','Chaudhry','Sheikh','Qureshi','Baig','Raza','Hussain',
+  'Iqbal','Javed','Siddiqui','Mirza','Rana','Gill','Awan','Cheema','Dar','Tarar'
+];
+
+/* Deterministic pseudo-random generator so the demo is stable on reload. */
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+const rng = makeRng(20250110);
+
+function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+/* Build the 300 students */
+const students = [];
+let sid = 1001;
+CLASSES.forEach(cls => {
+  for (let i = 0; i < cls.count; i++) {
+    students.push({
+      id: 'STU-' + sid,
+      name: pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES),
+      cls: cls.name,
+      fee: cls.fee
+    });
+    sid++;
+  }
+});
+
+/* Build payment records for each student × each month.
+   Payment behaviour is weighted so most students pay, some partially,
+   and a shrinking minority stays late. Later months are still open. */
+const today = new Date('2025-06-18');
+
+function dueDate(month) {
+  return new Date(month.key + '-' + String(month.dueDay).padStart(2, '0'));
+}
+
+function buildRecords() {
+  const records = [];
+  students.forEach(stu => {
+    TERM_MONTHS.forEach((m, idx) => {
+      const due = dueDate(m);
+      const isPast = today >= due;
+      // probability of paying declines slightly for later months (still open)
+      const openFactor = idx >= 4 ? 0.55 : 1;
+      const roll = rng();
+
+      let paidAmt = 0;
+      let paidOn = null;
+      let status;
+
+      if (roll < 0.74 * openFactor + 0.12) {
+        // paid in full
+        paidAmt = stu.fee;
+        const day = 1 + Math.floor(rng() * 14);
+        const d = new Date(due);
+        d.setDate(day);
+        paidOn = d.toISOString().slice(0, 10);
+        status = 'paid';
+      } else if (roll < 0.88) {
+        // partial
+        paidAmt = Math.round((stu.fee * (0.3 + rng() * 0.4)) / 100) * 100;
+        const d = new Date(due);
+        d.setDate(5 + Math.floor(rng() * 20));
+        paidOn = d.toISOString().slice(0, 10);
+        status = 'partial';
+      } else {
+        // unpaid
+        status = isPast ? 'late' : 'partial';
+        paidAmt = 0;
+      }
+
+      if (status === 'partial' && paidAmt >= stu.fee) {
+        status = 'paid';
+        paidAmt = stu.fee;
+      }
+
+      records.push({
+        studentId: stu.id,
+        name: stu.name,
+        cls: stu.cls,
+        month: m.key,
+        monthLabel: m.label,
+        due: stu.fee,
+        paid: paidAmt,
+        balance: stu.fee - paidAmt,
+        dueDate: due.toISOString().slice(0, 10),
+        paidOn: paidOn || '—',
+        status
+      });
+    });
+  });
+  return records;
+}
+
+const records = buildRecords();
+
+/* ------------------------------------------------------------------
+   FORMATTING
+   ------------------------------------------------------------------ */
+const fmt = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
+function pkr(n) { return 'Rs ' + fmt.format(n); }
+function shortPkr(n) {
+  if (n >= 10000000) return 'Rs ' + (n / 10000000).toFixed(2) + ' Cr';
+  if (n >= 100000)   return 'Rs ' + (n / 100000).toFixed(2) + ' Lac';
+  return pkr(n);
+}
+
+/* ------------------------------------------------------------------
+   SUMMARY CARDS
+   ------------------------------------------------------------------ */
+function renderCards() {
+  const totalDue = records.reduce((a, r) => a + r.due, 0);
+  const totalPaid = records.reduce((a, r) => a + r.paid, 0);
+  const outstanding = totalDue - totalPaid;
+  const paidCount = records.filter(r => r.status === 'paid').length;
+  const partialCount = records.filter(r => r.status === 'partial').length;
+  const lateCount = records.filter(r => r.status === 'late').length;
+  const rate = totalDue ? (totalPaid / totalDue) * 100 : 0;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card total">
+      <div class="label">Total Billed</div>
+      <div class="value">${shortPkr(totalDue)}</div>
+      <div class="sub">${records.length} fee entries · ${students.length} students</div>
+    </div>
+    <div class="card paid">
+      <div class="label">Collected</div>
+      <div class="value">${shortPkr(totalPaid)}</div>
+      <div class="sub">${paidCount} fully paid · ${rate.toFixed(1)}% of billed</div>
+    </div>
+    <div class="card partial">
+      <div class="label">Partial Payments</div>
+      <div class="value">${partialCount}</div>
+      <div class="sub">part of fee received</div>
+    </div>
+    <div class="card late">
+      <div class="label">Late / Unpaid</div>
+      <div class="value">${lateCount}</div>
+      <div class="sub">outstanding ${shortPkr(outstanding)}</div>
+    </div>
+  `;
+}
+
+/* ------------------------------------------------------------------
+   MONTHLY SUMMARY TABLE + BARS
+   ------------------------------------------------------------------ */
+function renderSummary() {
+  const body = document.getElementById('summaryBody');
+  const bars = document.getElementById('summaryBars');
+  body.innerHTML = '';
+  bars.innerHTML = '';
+
+  TERM_MONTHS.forEach(m => {
+    const rows = records.filter(r => r.month === m.key);
+    const billed = rows.reduce((a, r) => a + r.due, 0);
+    const collected = rows.reduce((a, r) => a + r.paid, 0);
+    const out = billed - collected;
+    const paid = rows.filter(r => r.status === 'paid').length;
+    const partial = rows.filter(r => r.status === 'partial').length;
+    const late = rows.filter(r => r.status === 'late').length;
+    const rate = billed ? (collected / billed) * 100 : 0;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${m.label}</strong></td>
+      <td class="num">${pkr(billed)}</td>
+      <td class="num">${pkr(collected)}</td>
+      <td class="num" style="color:${out > 0 ? 'var(--red)' : 'var(--gray)'}">${pkr(out)}</td>
+      <td class="num">${paid}</td>
+      <td class="num">${partial}</td>
+      <td class="num">${late}</td>
+      <td class="num"><strong>${rate.toFixed(0)}%</strong></td>
+    `;
+    body.appendChild(tr);
+
+    // stacked progress bar
+    const total = rows.length || 1;
+    const pPct = (paid / total) * 100;
+    const qPct = (partial / total) * 100;
+    const lPct = (late / total) * 100;
+
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div><strong>${m.label.split(' ')[0]}</strong></div>
+      <div class="bar-track" title="${paid} paid · ${partial} partial · ${late} late">
+        <div style="display:flex;height:100%">
+          <div class="bar-fill paid" style="width:${pPct}%"></div>
+          <div class="bar-fill partial" style="width:${qPct}%"></div>
+          <div class="bar-fill late" style="width:${lPct}%"></div>
+        </div>
+      </div>
+      <div class="bar-val">${collected.toLocaleString('en-PK')} / ${billed.toLocaleString('en-PK')}</div>
+    `;
+    bars.appendChild(row);
+  });
+}
+
+/* ------------------------------------------------------------------
+   LEDGER TABLE + FILTERS
+   ------------------------------------------------------------------ */
+const searchEl = document.getElementById('search');
+const classEl = document.getElementById('classFilter');
+const statusEl = document.getElementById('statusFilter');
+const monthEl = document.getElementById('monthFilter');
+const ledgerBody = document.getElementById('ledgerBody');
+const emptyMsg = document.getElementById('emptyMsg');
+const countLabel = document.getElementById('countLabel');
+
+/* populate filter dropdowns */
+CLASSES.forEach(c => {
+  const o = document.createElement('option');
+  o.value = c.name; o.textContent = c.name;
+  classEl.appendChild(o);
+});
+TERM_MONTHS.forEach(m => {
+  const o = document.createElement('option');
+  o.value = m.key; o.textContent = m.label;
+  monthEl.appendChild(o);
+});
+
+function statusBadge(s) {
+  const label = s === 'paid' ? 'Paid' : s === 'partial' ? 'Partial' : 'Late';
+  return `<span class="badge ${s}">${label}</span>`;
+}
+
+function renderLedger() {
+  const q = searchEl.value.trim().toLowerCase();
+  const cls = classEl.value;
+  const st = statusEl.value;
+  const mo = monthEl.value;
+
+  const filtered = records.filter(r => {
+    if (cls && r.cls !== cls) return false;
+    if (st && r.status !== st) return false;
+    if (mo && r.month !== mo) return false;
+    if (q) {
+      const hay = (r.name + ' ' + r.studentId + ' ' + r.cls).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  countLabel.textContent = filtered.length + ' of ' + records.length + ' entries';
+  ledgerBody.innerHTML = '';
+
+  if (!filtered.length) {
+    emptyMsg.style.display = 'block';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+
+  // cap render for speed, but note the total
+  const limit = 400;
+  filtered.slice(0, limit).forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${r.studentId}</td>
+      <td>${r.name}</td>
+      <td>${r.cls}</td>
+      <td>${r.monthLabel}</td>
+      <td class="num">${fmt.format(r.due)}</td>
+      <td class="num">${fmt.format(r.paid)}</td>
+      <td class="num" style="color:${r.balance > 0 ? 'var(--red)' : 'var(--green)'}">${fmt.format(r.balance)}</td>
+      <td>${r.dueDate}</td>
+      <td>${r.paidOn}</td>
+      <td>${statusBadge(r.status)}</td>
+    `;
+    ledgerBody.appendChild(tr);
+  });
+}
+
+[searchEl, classEl, statusEl, monthEl].forEach(el => {
+  el.addEventListener('input', renderLedger);
+  el.addEventListener('change', renderLedger);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  searchEl.value = '';
+  classEl.value = '';
+  statusEl.value = '';
+  monthEl.value = '';
+  renderLedger();
+});
+
+/* ------------------------------------------------------------------
+   CSV EXPORT (works with the chat's Excel export too)
+   ------------------------------------------------------------------ */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const q = searchEl.value.trim().toLowerCase();
+  const cls = classEl.value;
+  const st = statusEl.value;
+  const mo = monthEl.value;
+
+  const rows = records.filter(r => {
+    if (cls && r.cls !== cls) return false;
+    if (st && r.status !== st) return false;
+    if (mo && r.month !== mo) return false;
+    if (q && !(r.name + ' ' + r.studentId + ' ' + r.cls).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const header = ['Student ID','Name','Class','Month','Fee Due (PKR)','Paid (PKR)','Balance (PKR)','Due Date','Paid On','Status'];
+  const lines = [header.join(',')];
+  rows.forEach(r => {
+    lines.push([
+      r.studentId, '"' + r.name + '"', r.cls, r.monthLabel,
+      r.due, r.paid, r.balance, r.dueDate, r.paidOn, r.status
+    ].join(','));
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'school-fee-ledger.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ------------------------------------------------------------------
+   INIT
+   ------------------------------------------------------------------ */
+document.getElementById('termLabel').textContent = 'Term: Jan – Jun 2025';
+document.getElementById('schoolLine').textContent =
+  students.length + ' students · ' + CLASSES.length + ' classes · monthly fee ledger';
+renderCards();
+renderSummary();
+renderLedger();
+</script>
+</body>
+</html>
